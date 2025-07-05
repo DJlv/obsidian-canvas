@@ -1,0 +1,121 @@
+// 节点边缘连接点样式
+.canvas-node {
+  // 边缘连接点容器
+  .side-connection-points {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; // 防止容器拦截鼠标事件
+    z-index: 10;
+    
+    // 顶部边缘连接点
+    .top-connection-points {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 0;
+      
+      .connection-point {
+        position: absolute;
+        top: 0;
+        transform: translate(-50%, -50%); // 使连接点居中对齐
+        width: 8px;
+        height: 8px;
+        border-radius: 50%; // 圆形连接点
+        background-color: rgba(var(--canvas-color), 0.5); // 半透明背景色
+        opacity: 0; // 默认隐藏
+        transition: opacity 0.2s ease; // 平滑过渡效果
+      }
+    }
+    
+    // 右侧边缘连接点
+    .right-connection-points {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 0;
+      height: 100%;
+      
+      .connection-point {
+        position: absolute;
+        right: 0;
+        transform: translate(50%, -50%); // 使连接点居中对齐
+        width: 8px;
+        height: 8px;
+        border-radius: 50%; // 圆形连接点
+        background-color: rgba(var(--canvas-color), 0.5); // 半透明背景色
+        opacity: 0; // 默认隐藏
+        transition: opacity 0.2s ease; // 平滑过渡效果
+      }
+    }
+    
+    // 底部边缘连接点
+    .bottom-connection-points {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0;
+      
+      .connection-point {
+        position: absolute;
+        bottom: 0;
+        transform: translate(-50%, 50%); // 使连接点居中对齐
+        width: 8px;
+        height: 8px;
+        border-radius: 50%; // 圆形连接点
+        background-color: rgba(var(--canvas-color), 0.5); // 半透明背景色
+        opacity: 0; // 默认隐藏
+        transition: opacity 0.2s ease; // 平滑过渡效果
+      }
+    }
+    
+    // 左侧边缘连接点
+    .left-connection-points {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 100%;
+      
+      .connection-point {
+        position: absolute;
+        left: 0;
+        transform: translate(-50%, -50%); // 使连接点居中对齐
+        width: 8px;
+        height: 8px;
+        border-radius: 50%; // 圆形连接点
+        background-color: rgba(var(--canvas-color), 0.5); // 半透明背景色
+        opacity: 0; // 默认隐藏
+        transition: opacity 0.2s ease; // 平滑过渡效果
+      }
+    }
+  }
+  
+  // 悬停时显示连接点
+  &:hover .side-connection-points .connection-point {
+    opacity: 0.5; // 鼠标悬停在节点上时，显示连接点
+    
+    &:hover, &.active {
+      opacity: 1; // 鼠标悬停在连接点上时，完全显示
+      background-color: rgba(var(--canvas-color), 1); // 不透明背景色
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.3); // 添加阴影效果，增强可见性
+    }
+  }
+}
+
+// 箭头样式
+.canvas-edges {
+  .canvas-edge-end {
+    position: absolute;
+    transform-origin: center !important; // 确保旋转以中心点为基准
+    z-index: 10;
+    pointer-events: none; // 防止箭头拦截鼠标事件
+    
+    &.from-line-end, &.to-line-end {
+      position: absolute;
+      transform-origin: center !important; // 确保箭头旋转以中心点为基准
+    }
+  }
+} 

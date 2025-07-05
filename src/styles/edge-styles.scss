@@ -1,0 +1,80 @@
+//#region Path
+.canvas-edges path {
+  &[data-path='dotted'] {
+    stroke-dasharray: calc(3px * var(--zoom-multiplier));
+  }
+
+  &[data-path='short-dashed'] {
+    stroke-dasharray: 9px;
+  }
+
+  &[data-path='long-dashed'] {
+    stroke-dasharray: 18px;
+  }
+}
+//#endregion
+
+//#region Arrow
+.canvas-edges {
+  [data-arrow='triangle-outline'], [data-arrow='diamond-outline'], [data-arrow='circle-outline'] {
+    polygon {
+      fill: var(--canvas-background);
+      
+      stroke: rgb(var(--canvas-color));
+      stroke-width: calc(3px * var(--zoom-multiplier));
+    }
+  }
+
+  [data-arrow='thin-triangle'] polygon {
+    fill: transparent;
+    
+    stroke: rgb(var(--canvas-color));
+    stroke-width: calc(4px * var(--zoom-multiplier));
+  }
+  
+  .canvas-edge-end {
+    position: absolute;
+    transform-origin: center !important;
+    z-index: 10;
+    pointer-events: none;
+    
+    transform: translate(-50%, -50%);
+    
+    &.from-line-end, &.to-line-end {
+      position: absolute;
+      transform-origin: center !important;
+    }
+  }
+}
+//#endregion
+
+//#region Custom Connection Points
+.canvas-node {
+  .side-connection-points {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    
+    .connection-point {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: rgba(var(--canvas-color), 0.5);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      
+      &.active {
+        opacity: 1;
+      }
+    }
+  }
+  
+  &:hover .side-connection-points .connection-point {
+    opacity: 0.5;
+  }
+}
+//#endregion
