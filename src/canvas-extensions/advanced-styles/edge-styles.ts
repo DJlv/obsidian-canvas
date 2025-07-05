@@ -165,6 +165,12 @@ export default class EdgeStylesExtension extends CanvasExtension {
       edge.center = path.center
       edge.path.interaction.setAttr("d", path?.svgPath)
       edge.path.display.setAttr("d", path?.svgPath)
+      
+      // 添加多个方向箭头
+      this.addMultipleArrows(canvas, edge);
+    } else {
+      // 即使是默认的贝塞尔曲线路径，也添加方向箭头
+      this.addMultipleArrows(canvas, edge);
     }
 
     // Update label position
@@ -174,6 +180,168 @@ export default class EdgeStylesExtension extends CanvasExtension {
     const arrowPolygonPoints = this.getArrowPolygonPoints(edgeData.styleAttributes?.arrow)
     if (edge.fromLineEnd?.el) edge.fromLineEnd.el.querySelector('polygon')?.setAttribute('points', arrowPolygonPoints)
     if (edge.toLineEnd?.el) edge.toLineEnd.el.querySelector('polygon')?.setAttribute('points', arrowPolygonPoints)
+  }
+
+  // 在连接线上添加多个方向箭头
+  private addMultipleArrows(canvas: Canvas, edge: CanvasEdge) {
+    // 移除现有的箭头
+    edge.lineGroupEl.querySelectorAll('.edge-direction-arrow').forEach(el => el.remove());
+    
+    // 创建SVG命名空间
+    const svgNS = "http://www.w3.org/2000/svg";
+    
+    // 获取路径元素
+    const pathElement = edge.path.display as unknown as SVGPathElement;
+    if (!pathElement) return;
+    
+    // 获取路径总长度
+    const pathLength = pathElement.getTotalLength();
+    if (pathLength <= 0) return;
+    
+    // 获取边缘数据和样式属性
+    const edgeData = edge.getData();
+    const arrowStyle = edgeData.styleAttributes?.arrow;
+    
+    // 如果箭头样式为none，则不添加方向箭头
+    if (arrowStyle === 'none') return;
+    
+    // 获取箭头密度设置（默认为中等密度）
+    const arrowDensity = edgeData.styleAttributes?.arrowDensity || 'medium';
+    
+    // 根据密度设置和路径长度计算箭头数量
+    let arrowCount = 1;
+    switch (arrowDensity) {
+      case 'low':
+        arrowCount = Math.max(1, Math.floor(pathLength / 200));
+        break;
+      case 'medium':
+        arrowCount = Math.max(1, Math.floor(pathLength / 100));
+        break;
+      case 'high':
+        arrowCount = Math.max(1, Math.floor(pathLength / 50));
+        break;
+      default:
+        arrowCount = Math.max(1, Math.floor(pathLength / 100));
+    }
+    
+    // 限制最大箭头数量
+    arrowCount = Math.min(20, arrowCount);
+    
+    // 获取箭头大小设置（默认为中等大小）
+    const arrowSize = edgeData.styleAttributes?.arrowSize || 'medium';
+    
+    // 根据大小设置确定箭头尺寸
+    let arrowPoints = '';
+    switch (arrowSize) {
+      case 'small':
+        arrowPoints = '0,0 -8,-4 -8,4';
+        break;
+      case 'medium':
+        arrowPoints = '0,0 -12,-6 -12,6';
+        break;
+      case 'large':
+        arrowPoints = '0,0 -16,-8 -16,8';
+        break;
+      default:
+        arrowPoints = '0,0 -12,-6 -12,6';
+    }
+    
+    // 获取线段颜色
+    let fillColor = 'var(--interactive-accent)';
+    let strokeColor = 'var(--background-primary)';
+    
+    // 如果边缘有颜色属性，则使用该颜色
+    if (edgeData.color) {
+      // 检查颜色是否为预设颜色（数字1-6）或十六进制颜色
+      if (/^[1-6]$/.test(edgeData.color)) {
+        // 预设颜色，使用CSS变量
+        fillColor = `var(--canvas-color-${edgeData.color})`;
+      } else {
+        // 十六进制颜色
+        fillColor = edgeData.color;
+      }
+      
+      // 确定适合的描边颜色（深色背景用浅色描边，浅色背景用深色描边）
+      if (this.isLightColor(fillColor)) {
+        strokeColor = '#333333';
+      } else {
+        strokeColor = '#ffffff';
+      }
+    }
+    
+    // 在路径上均匀分布箭头
+    for (let i = 1; i <= arrowCount; i++) {
+      // 计算箭头在路径上的位置（均匀分布）
+      const position = pathLength * i / (arrowCount + 1);
+      
+      // 获取路径上该位置的点坐标
+      const point = pathElement.getPointAtLength(position);
+      
+      // 计算路径在该点的切线方向（通过获取前后两个点的位置差）
+      const delta = 0.01 * pathLength;
+      const pointBefore = pathElement.getPointAtLength(Math.max(0, position - delta));
+      const pointAfter = pathElement.getPointAtLength(Math.min(pathLength, position + delta));
+      
+      // 计算方向角度
+      const dx = pointAfter.x - pointBefore.x;
+      const dy = pointAfter.y - pointBefore.y;
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      
+      // 创建箭头
+      const arrow = document.createElementNS(svgNS, "polygon");
+      arrow.setAttribute("class", "edge-direction-arrow");
+      arrow.setAttribute("points", arrowPoints);
+      arrow.setAttribute("fill", fillColor);
+      arrow.setAttribute("stroke", strokeColor);
+      arrow.setAttribute("stroke-width", "1");
+      arrow.setAttribute("transform", `translate(${point.x},${point.y}) rotate(${angle})`);
+      
+      // 添加到边缘的线组元素中
+      edge.lineGroupEl.appendChild(arrow);
+    }
+  }
+  
+  // 判断颜色是否为浅色
+  private isLightColor(color: string): boolean {
+    // 如果是CSS变量，无法直接判断，默认为深色
+    if (color.startsWith('var(--')) {
+      return false;
+    }
+    
+    // 将颜色转换为RGB
+    let r, g, b;
+    
+    // 处理十六进制颜色
+    if (color.startsWith('#')) {
+      const hex = color.substring(1);
+      // 处理缩写形式 (#RGB)
+      if (hex.length === 3) {
+        r = parseInt(hex[0] + hex[0], 16);
+        g = parseInt(hex[1] + hex[1], 16);
+        b = parseInt(hex[2] + hex[2], 16);
+      } 
+      // 处理完整形式 (#RRGGBB)
+      else if (hex.length === 6) {
+        r = parseInt(hex.substring(0, 2), 16);
+        g = parseInt(hex.substring(2, 4), 16);
+        b = parseInt(hex.substring(4, 6), 16);
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+    
+    // 计算亮度 (HSP 公式)
+    // 参考: http://alienryderflex.com/hsp.html
+    const brightness = Math.sqrt(
+      0.299 * (r * r) +
+      0.587 * (g * g) +
+      0.114 * (b * b)
+    );
+    
+    // 亮度大于 127.5 (一半的 255) 认为是浅色
+    return brightness > 127.5;
   }
 
   private onEdgeCenterRequested(_canvas: Canvas, edge: CanvasEdge, center: Position) {

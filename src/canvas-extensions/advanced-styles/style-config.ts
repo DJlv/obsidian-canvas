@@ -219,6 +219,55 @@ export const BUILTIN_EDGE_STYLE_ATTRIBUTES = [
         icon: 'tally-1',
         label: 'Blunt',
         value: 'blunt'
+      },
+      {
+        icon: 'tally-0',
+        label: 'None',
+        value: 'none'
+      }
+    ]
+  },
+  // 添加箭头密度选项
+  {
+    key: 'arrowDensity',
+    label: '箭头密度',
+    options: [
+      {
+        icon: 'arrow-right',
+        label: '低密度',
+        value: 'low'
+      },
+      {
+        icon: 'arrow-right-arrow-left',
+        label: '中等密度',
+        value: null
+      },
+      {
+        icon: 'arrows-right-left',
+        label: '高密度',
+        value: 'high'
+      }
+    ]
+  },
+  // 添加箭头大小选项
+  {
+    key: 'arrowSize',
+    label: '箭头大小',
+    options: [
+      {
+        icon: 'minus',
+        label: '小',
+        value: 'small'
+      },
+      {
+        icon: 'equals',
+        label: '中',
+        value: null
+      },
+      {
+        icon: 'plus',
+        label: '大',
+        value: 'large'
       }
     ]
   },

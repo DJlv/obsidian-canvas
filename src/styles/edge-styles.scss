@@ -78,3 +78,12 @@
   }
 }
 //#endregion
+
+// 添加方向箭头样式
+.edge-direction-arrow {
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.9;
+  stroke-linejoin: round;
+  filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, 0.3));
+}
