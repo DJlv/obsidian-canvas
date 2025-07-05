@@ -245,6 +245,7 @@ export const BUILTIN_EDGE_STYLE_ATTRIBUTES = [
     ]
   },
   {
+
     key: 'pathfindingMethod',
     label: 'Pathfinding Method',
     options: [

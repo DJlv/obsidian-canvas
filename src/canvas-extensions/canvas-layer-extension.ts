@@ -249,51 +249,110 @@ export default class CanvasLayerExtension extends CanvasExtension {
       }
       row.appendChild(setCurrentBtn)
 
-      // 显隐按钮
-      const visibleBtn = document.createElement('button')
-      visibleBtn.textContent = layer.visible ? '👁️' : '🚫'
-      visibleBtn.title = layer.visible ? '隐藏图层' : '显示图层'
-      visibleBtn.style.marginRight = '8px'
-      visibleBtn.onclick = () => {
+      // 图层可见性切换
+      const visibilityBtn = document.createElement('button')
+      visibilityBtn.textContent = layer.visible ? '👁️' : '👁️‍🗨️'
+      visibilityBtn.title = layer.visible ? '隐藏图层' : '显示图层'
+      visibilityBtn.style.marginRight = '6px'
+      visibilityBtn.onclick = () => {
         layer.visible = !layer.visible
         this.saveLayers(canvas, layers)
         this.renderLayerList(canvas, container)
         this.patchNodeVisibility(canvas)
       }
-      row.appendChild(visibleBtn)
+      row.appendChild(visibilityBtn)
 
-      // 名称（可编辑）
+      // 图层名称
       const nameInput = document.createElement('input')
+      nameInput.type = 'text'
       nameInput.value = layer.name
       nameInput.style.flex = '1'
-      nameInput.style.marginRight = '8px'
+      nameInput.style.marginRight = '6px'
       nameInput.onchange = () => {
         layer.name = nameInput.value
         this.saveLayers(canvas, layers)
       }
       row.appendChild(nameInput)
 
-      // 删除按钮
-      const delBtn = document.createElement('button')
-      delBtn.textContent = '🗑️'
-      delBtn.title = '删除图层'
-      delBtn.style.marginRight = '4px'
-      delBtn.onclick = () => {
-        if (confirm('确定要删除该图层吗？')) {
-          // 删除图层时，移除节点归属
-          layer.nodeIds.forEach(nodeId => {
-            if (canvas.nodes.has(nodeId)) {
-              // 可选：也可以选择将节点移动到其他图层
-              canvas.removeNode(canvas.nodes.get(nodeId)!)
-            }
-          })
-          layers.splice(idx, 1)
+      // 图层信息（节点和边缘数量）
+      const infoText = document.createElement('span')
+      infoText.style.fontSize = '12px'
+      infoText.style.color = '#999'
+      infoText.style.marginRight = '6px'
+      row.appendChild(infoText)
+
+      // 上移按钮
+      if (idx > 0) {
+        const upBtn = document.createElement('button')
+        upBtn.textContent = '↑'
+        upBtn.title = '上移图层'
+        upBtn.style.marginRight = '4px'
+        upBtn.onclick = () => {
+          const temp = layers[idx]
+          layers[idx] = layers[idx - 1]
+          layers[idx - 1] = temp
           this.saveLayers(canvas, layers)
           this.renderLayerList(canvas, container)
-          this.patchNodeVisibility(canvas)
         }
+        row.appendChild(upBtn)
+      } else {
+        const spacer = document.createElement('div')
+        spacer.style.width = '20px'
+        row.appendChild(spacer)
       }
-      row.appendChild(delBtn)
+
+      // 下移按钮
+      if (idx < layers.length - 1) {
+        const downBtn = document.createElement('button')
+        downBtn.textContent = '↓'
+        downBtn.title = '下移图层'
+        downBtn.style.marginRight = '4px'
+        downBtn.onclick = () => {
+          const temp = layers[idx]
+          layers[idx] = layers[idx + 1]
+          layers[idx + 1] = temp
+          this.saveLayers(canvas, layers)
+          this.renderLayerList(canvas, container)
+        }
+        row.appendChild(downBtn)
+      } else {
+        const spacer = document.createElement('div')
+        spacer.style.width = '20px'
+        row.appendChild(spacer)
+      }
+
+      // 删除按钮（只有多于一个图层时才能删除）
+      if (layers.length > 1) {
+        const deleteBtn = document.createElement('button')
+        deleteBtn.textContent = '×'
+        deleteBtn.title = '删除图层'
+        deleteBtn.style.color = '#ff4d4f'
+        deleteBtn.onclick = () => {
+          if (confirm(`确定要删除图层"${layer.name}"吗？图层中的节点和连接线将被移动到默认图层。`)) {
+            // 如果删除的是当前图层，将当前图层设为第一个图层
+            if (layer.id === currentLayerId) {
+              const newCurrentIdx = idx === 0 ? 1 : 0
+              currentLayerId = layers[newCurrentIdx].id
+            }
+            
+            // 将该图层的节点和边缘移动到第一个图层
+            const targetLayer = layers[0]
+            if (layer.nodeIds?.length) {
+              targetLayer.nodeIds = [...(targetLayer.nodeIds || []), ...(layer.nodeIds || [])]
+            }
+            if (layer.edgeIds?.length) {
+              targetLayer.edgeIds = [...(targetLayer.edgeIds || []), ...(layer.edgeIds || [])]
+            }
+            
+            // 移除该图层
+            layers.splice(idx, 1)
+            this.saveLayers(canvas, layers)
+            this.renderLayerList(canvas, container)
+            this.patchNodeVisibility(canvas)
+          }
+        }
+        row.appendChild(deleteBtn)
+      }
 
       container.appendChild(row)
     })
@@ -384,32 +443,89 @@ export default class CanvasLayerExtension extends CanvasExtension {
 
   // 控制节点和连接线显示/隐藏（兼容edgeIds可选）
   private patchNodeVisibility(canvas: Canvas) {
-    const layers = (canvas.getData().layers ?? []) as CanvasLayer[]
-    const visibleLayerIds = new Set(layers.filter(l => l.visible).map(l => l.id))
-    // 统计所有可见图层下的节点id和连接线id
-    const visibleNodeIds = new Set<string>()
-    const visibleEdgeIds = new Set<string>()
-    for (const layer of layers) {
-      if (visibleLayerIds.has(layer.id)) {
-        layer.nodeIds.forEach(id => visibleNodeIds.add(id))
-        if (layer.edgeIds) layer.edgeIds.forEach(id => visibleEdgeIds.add(id))
+    // 获取图层数据
+    const layers = canvas.getData().layers as CanvasLayer[]
+    if (!layers || !Array.isArray(layers)) return
+
+    // 创建一个映射，记录每个节点和边缘所属的图层及其可见性
+    const nodeLayerMap = new Map<string, {layerId: string, visible: boolean}>()
+    const edgeLayerMap = new Map<string, {layerId: string, visible: boolean}>()
+
+    // 填充映射
+    layers.forEach(layer => {
+      // 处理节点
+      layer.nodeIds?.forEach(nodeId => {
+        nodeLayerMap.set(nodeId, {layerId: layer.id, visible: layer.visible})
+      })
+      // 处理边缘
+      layer.edgeIds?.forEach(edgeId => {
+        edgeLayerMap.set(edgeId, {layerId: layer.id, visible: layer.visible})
+      })
+    })
+
+    // 应用节点可见性
+    canvas.nodes.forEach(node => {
+      const layerInfo = nodeLayerMap.get(node.id)
+      if (layerInfo) {
+        // 设置节点可见性
+        node.nodeEl.style.display = layerInfo.visible ? '' : 'none'
       }
-    }
-    // 节点显示
-    for (const node of canvas.nodes.values()) {
-      node.nodeEl.style.display = visibleNodeIds.has(node.id) ? '' : 'none'
-    }
-    // 连接线显示（严格跟随图层）
-    for (const edge of canvas.edges.values()) {
-      const show = visibleEdgeIds.has(edge.id)
-      edge.path.display.style.display = show ? '' : 'none'
-      edge.path.interaction.style.display = show ? '' : 'none'
-      if (edge.labelElement?.wrapperEl) edge.labelElement.wrapperEl.style.display = show ? '' : 'none'
-      // 箭头相关
-      if (edge.fromLineEnd?.el) edge.fromLineEnd.el.style.display = show ? '' : 'none'
-      if (edge.toLineEnd?.el) edge.toLineEnd.el.style.display = show ? '' : 'none'
-      if (edge.lineEndGroupEl) edge.lineEndGroupEl.style.display = show ? '' : 'none'
-    }
+    })
+
+    // 应用边缘可见性
+    canvas.edges.forEach(edge => {
+      const layerInfo = edgeLayerMap.get(edge.id)
+      if (layerInfo) {
+        // 设置边缘可见性
+        if (edge.lineGroupEl) {
+          edge.lineGroupEl.style.display = layerInfo.visible ? '' : 'none'
+        }
+        
+        // 设置线条可见性
+        if (edge.path?.display) {
+          edge.path.display.style.display = layerInfo.visible ? '' : 'none'
+        }
+        
+        // 设置交互区域可见性
+        if (edge.path?.interaction) {
+          edge.path.interaction.style.display = layerInfo.visible ? '' : 'none'
+        }
+        
+        // 设置标签可见性
+        if (edge.labelElement?.wrapperEl) {
+          edge.labelElement.wrapperEl.style.display = layerInfo.visible ? '' : 'none'
+        }
+        
+        // 设置线端点可见性
+        if (edge.fromLineEnd?.el) {
+          edge.fromLineEnd.el.style.display = layerInfo.visible ? '' : 'none'
+        }
+        
+        if (edge.toLineEnd?.el) {
+          edge.toLineEnd.el.style.display = layerInfo.visible ? '' : 'none'
+        }
+        
+        if (edge.lineEndGroupEl) {
+          edge.lineEndGroupEl.style.display = layerInfo.visible ? '' : 'none'
+        }
+        
+        // 处理边缘上的所有箭头
+        this.updateEdgeArrowsVisibility(edge, layerInfo.visible)
+      }
+    })
+  }
+
+  // 更新边缘上箭头的可见性
+  private updateEdgeArrowsVisibility(edge: any, visible: boolean) {
+    if (!edge.lineGroupEl) return
+    
+    // 获取边缘上的所有箭头元素
+    const arrows = edge.lineGroupEl.querySelectorAll('.edge-direction-arrow')
+    
+    // 设置箭头的可见性
+    arrows.forEach((arrow: HTMLElement) => {
+      arrow.style.display = visible ? '' : 'none'
+    })
   }
 
   // 节点移动到当前图层

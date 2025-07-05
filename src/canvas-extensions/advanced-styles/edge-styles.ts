@@ -22,21 +22,61 @@ export default class EdgeStylesExtension extends CanvasExtension {
   isEnabled() { return 'edgesStylingFeatureEnabled' as const }
 
   init() {
-    this.cssStylesManager = new CssStylesConfigManager(this.plugin, 'advanced-canvas-edge-style', styleAttributeValidator)
+    // 注册样式配置管理器
+    this.cssStylesManager = new CssStylesConfigManager(
+      this.plugin,
+      'advanced-canvas-edge-style',
+      styleAttributeValidator
+    )
 
+    // 注册事件监听器
     this.plugin.registerEvent(this.plugin.app.workspace.on(
-      'advanced-canvas:popup-menu-created',
-      (canvas: Canvas) => this.onPopupMenuCreated(canvas)
+      'advanced-canvas:canvas-changed',
+      (canvas: Canvas) => {
+        // 监听图层变化，更新箭头可见性
+        this.setupLayerChangeListener(canvas)
+      }
     ))
 
+    // 监听边缘变化
     this.plugin.registerEvent(this.plugin.app.workspace.on(
       'advanced-canvas:edge-changed',
-      (canvas: Canvas, edge: CanvasEdge) => this.onEdgeChanged(canvas, edge)
+      (canvas: Canvas, edge: CanvasEdge) => {
+        if (!this.shouldUpdateEdge(canvas)) return
+        this.onEdgeChanged(canvas, edge)
+      }
     ))
 
+    // 监听边缘创建
+    this.plugin.registerEvent(this.plugin.app.workspace.on(
+      'advanced-canvas:edge-created',
+      (canvas: Canvas, edge: CanvasEdge) => {
+        if (!this.shouldUpdateEdge(canvas)) return
+        this.onEdgeChanged(canvas, edge)
+        
+        // 延迟添加箭头，确保边缘已完全创建
+        setTimeout(() => {
+          this.addMultipleArrows(canvas, edge)
+        }, 50)
+      }
+    ))
+
+    // 监听边缘中心点请求（用于添加标签）
     this.plugin.registerEvent(this.plugin.app.workspace.on(
       'advanced-canvas:edge-center-requested',
-      (canvas: Canvas, edge: CanvasEdge, center: Position) => this.onEdgeCenterRequested(canvas, edge, center)
+      (canvas: Canvas, edge: CanvasEdge, center: Position) => {
+        if (!this.shouldUpdateEdge(canvas)) return
+        this.onEdgeCenterRequested(canvas, edge, center)
+      }
+    ))
+
+    // 监听弹出菜单创建
+    this.plugin.registerEvent(this.plugin.app.workspace.on(
+      'advanced-canvas:popup-menu-created',
+      (canvas: Canvas) => {
+        if (!this.shouldUpdateEdge(canvas)) return
+        this.onPopupMenuCreated(canvas)
+      }
     ))
 
     this.plugin.registerEvent(this.plugin.app.workspace.on(
@@ -94,10 +134,6 @@ export default class EdgeStylesExtension extends CanvasExtension {
       }
     ))
   }
-
-
-  
-
 
   // Skip if isDragging and setting isn't enabled and not connecting an edge
   private shouldUpdateEdge(canvas: Canvas): boolean {
@@ -283,7 +319,6 @@ export default class EdgeStylesExtension extends CanvasExtension {
     const strokeAttr = edge.path.display.getAttribute('stroke');
     if (strokeAttr && strokeAttr !== 'none') {
       fillColor = strokeAttr;
-      console.log('直接从SVG获取颜色:', fillColor);
     } 
     // 如果没有直接获取到，使用计算样式
     else {
@@ -291,7 +326,6 @@ export default class EdgeStylesExtension extends CanvasExtension {
         const computedStyle = window.getComputedStyle(edge.path.display);
         if (computedStyle.stroke && computedStyle.stroke !== 'none') {
           fillColor = computedStyle.stroke;
-          console.log('从计算样式获取颜色:', fillColor);
         }
       } catch (e) {
         console.error('获取计算样式失败:', e);
@@ -306,13 +340,14 @@ export default class EdgeStylesExtension extends CanvasExtension {
         } else {
           fillColor = edgeData.color;
         }
-        console.log('从边缘数据获取颜色:', fillColor);
       } else {
         // 默认颜色
         fillColor = 'var(--interactive-accent)';
-        console.log('使用默认颜色');
       }
     }
+    
+    // 检查边缘是否可见（基于图层设置）
+    const isVisible = this.isEdgeVisible(canvas, edge);
     
     // 在路径上均匀分布箭头
     for (let i = 1; i <= arrowCount; i++) {
@@ -341,6 +376,12 @@ export default class EdgeStylesExtension extends CanvasExtension {
       arrow.setAttribute("stroke-width", "1");
       arrow.setAttribute("transform", `translate(${point.x},${point.y}) rotate(${angle})`);
       
+      // 设置箭头的可见性，跟随边缘的可见性
+      arrow.style.display = isVisible ? '' : 'none';
+      
+      // 添加边缘ID属性，便于图层管理
+      arrow.setAttribute("data-edge-id", edge.id);
+      
       // 添加样式属性，帮助调试
       arrow.setAttribute("data-color-source", fillColor);
       
@@ -349,6 +390,28 @@ export default class EdgeStylesExtension extends CanvasExtension {
     }
   }
   
+  // 检查边缘是否可见（基于图层设置）
+  private isEdgeVisible(canvas: Canvas, edge: CanvasEdge): boolean {
+    // 获取图层数据
+    const layers = canvas.getData().layers as any[];
+    if (!layers || !Array.isArray(layers)) return true;
+    
+    // 检查边缘元素的显示状态
+    if (edge.lineGroupEl && edge.lineGroupEl.style.display === 'none') {
+      return false;
+    }
+    
+    // 查找边缘所在的图层
+    for (const layer of layers) {
+      if (layer.edgeIds?.includes(edge.id)) {
+        return layer.visible;
+      }
+    }
+    
+    // 如果没有找到边缘所在的图层，默认为可见
+    return true;
+  }
+
   // 获取边缘的颜色（综合多种方法）
   private getEdgeColor(edge: CanvasEdge): string {
     // 直接从DOM元素获取颜色
@@ -506,5 +569,45 @@ export default class EdgeStylesExtension extends CanvasExtension {
       return `-10,8 10,8 10,6 -10,6`
     else // Default triangle
       return `0,0 6.5,10.4 -6.5,10.4`
+  }
+
+  // 设置图层变化监听器
+  private setupLayerChangeListener(canvas: Canvas) {
+    // 监听图层可见性变化
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && 
+            mutation.attributeName === 'style' && 
+            mutation.target instanceof HTMLElement) {
+          
+          const edgeEl = mutation.target;
+          const edgeId = edgeEl.dataset.id;
+          
+          if (edgeId && canvas.edges.has(edgeId)) {
+            const edge = canvas.edges.get(edgeId)!; // 使用非空断言，因为已经检查了has(edgeId)
+            // 获取边缘的可见性
+            const isVisible = edgeEl.style.display !== 'none';
+            
+            // 更新该边缘上所有箭头的可见性
+            this.updateArrowsVisibility(edge, isVisible);
+          }
+        }
+      });
+    });
+    
+    // 为每个边缘元素添加观察器
+    canvas.edges.forEach(edge => {
+      if (edge.lineGroupEl) {
+        observer.observe(edge.lineGroupEl, { attributes: true });
+      }
+    });
+  }
+  
+  // 更新箭头可见性
+  private updateArrowsVisibility(edge: CanvasEdge, isVisible: boolean) {
+    const arrows = edge.lineGroupEl.querySelectorAll('.edge-direction-arrow');
+    arrows.forEach((arrow: HTMLElement) => {
+      arrow.style.display = isVisible ? '' : 'none';
+    });
   }
 }
