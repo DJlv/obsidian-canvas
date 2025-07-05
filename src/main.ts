@@ -47,6 +47,7 @@ import EdgeHighlightCanvasExtension from './canvas-extensions/edge-highlight-can
 import CanvasLayerExtension from './canvas-extensions/canvas-layer-extension'
 import CustomEdgeConnectionPositionsExtension from './canvas-extensions/custom-edge-connection-positions'
 import CustomEdgeConnectionRendererExtension from './canvas-extensions/custom-edge-connection-renderer'
+import CanvasSettingsPanelExtension from './canvas-extensions/canvas-settings-panel-extension'
 // import TableCanvasExtension from './canvas-extensions/table-canvas-extension'
 // import PureTableCanvasExtension from './canvas-extensions/pure-table-canvas-extension'
 
@@ -109,6 +110,7 @@ const CANVAS_EXTENSIONS: typeof CanvasExtension[] = [
   FocusModeCanvasExtension,
   EncapsulateCanvasExtension,
   CanvasLayerExtension,
+  CanvasSettingsPanelExtension,
   // TableCanvasExtension,
   // PureTableCanvasExtension,
 ]
