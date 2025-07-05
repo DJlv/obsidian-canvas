@@ -12,7 +12,7 @@ export interface CanvasMetadata {
   startNode?: string
 }
 
-export type CanvasNodeType = 'text' | 'group' | 'file' | 'link' | 'table' | 'pure-table' | 'xinyang'
+export type CanvasNodeType = 'text' | 'group' | 'file' | 'link' | 'table' | 'pure-table'
 export interface CanvasNodeData {
   id: string
   type: CanvasNodeType
@@ -30,7 +30,7 @@ export interface CanvasNodeData {
   styleAttributes?: { [key: string]: string | null } // AdvancedJsonCanvas
 }
 
-export type AnyCanvasNodeData = CanvasNodeData | CanvasTextNodeData | CanvasFileNodeData | CanvasLinkNodeData | CanvasGroupNodeData | CanvasTableNodeData | CanvasPureTableNodeData | CanvasXinyangNodeData
+export type AnyCanvasNodeData = CanvasNodeData | CanvasTextNodeData | CanvasFileNodeData | CanvasLinkNodeData | CanvasGroupNodeData | CanvasTableNodeData | CanvasPureTableNodeData
 
 export interface CanvasTextNodeData extends CanvasNodeData {
   type: 'text'
@@ -60,13 +60,6 @@ export interface CanvasGroupNodeData extends CanvasNodeData {
   backgroundStyle?: BackgroundStyle
 
   collapsed?: boolean // AdvancedJsonCanvas
-}
-
-// 信阳市节点类型，只显示文本内容
-export interface CanvasXinyangNodeData extends CanvasNodeData {
-  type: 'xinyang'
-  text: string
-  showOnlyText?: boolean // 是否只显示文本部分
 }
 
 type Side = 'top' | 'right' | 'bottom' | 'left'

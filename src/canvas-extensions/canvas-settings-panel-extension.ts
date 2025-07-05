@@ -31,6 +31,7 @@ const SETTINGS_LABELS = {
   nodeStylingFeatureEnabled: { name: '启用节点样式', desc: '允许自定义节点样式' },
   customNodeStyleAttributes: { name: '自定义节点样式属性', desc: '添加自定义节点样式属性' },
   defaultTextNodeStyleAttributes: { name: '默认文本节点样式', desc: '设置默认文本节点样式' },
+  defaultNodeDisplay: { name: '默认节点显示方式', desc: '设置默认节点的显示方式' },
   
   // 连接线设置
   edgesStylingFeatureEnabled: { name: '启用连接线样式', desc: '允许自定义连接线样式' },
@@ -290,7 +291,7 @@ export default class CanvasSettingsPanelExtension extends CanvasExtension {
     })
   }
 
-  private createSettingControl(container: HTMLElement, setting: { key: string, type: string, value: any }) {
+  private createSettingControl(container: HTMLElement, setting: { key: string, type: string, value: any, options?: {value: any, label: string}[], onChange?: (value: any) => void }) {
     const { key, type, value } = setting
     const settingsManager = this.plugin.settings
     
@@ -334,8 +335,12 @@ export default class CanvasSettingsPanelExtension extends CanvasExtension {
           toggleLabel.textContent = newValue ? '开启' : '关闭'
           
           // 更新设置
-          const updateData = { [key]: newValue }
-          settingsManager.setSetting(updateData)
+          if (setting.onChange) {
+            setting.onChange(newValue);
+          } else {
+            const updateData = { [key]: newValue }
+            settingsManager.setSetting(updateData)
+          }
         })
         
         container.appendChild(toggleContainer)
@@ -352,8 +357,12 @@ export default class CanvasSettingsPanelExtension extends CanvasExtension {
         
         input.addEventListener('change', () => {
           // 更新设置
-          const updateData = { [key]: input.value }
-          settingsManager.setSetting(updateData)
+          if (setting.onChange) {
+            setting.onChange(input.value);
+          } else {
+            const updateData = { [key]: input.value }
+            settingsManager.setSetting(updateData)
+          }
         })
         
         container.appendChild(input)
@@ -370,8 +379,12 @@ export default class CanvasSettingsPanelExtension extends CanvasExtension {
         
         numInput.addEventListener('change', () => {
           // 更新设置
-          const updateData = { [key]: Number(numInput.value) }
-          settingsManager.setSetting(updateData)
+          if (setting.onChange) {
+            setting.onChange(Number(numInput.value));
+          } else {
+            const updateData = { [key]: Number(numInput.value) }
+            settingsManager.setSetting(updateData)
+          }
         })
         
         container.appendChild(numInput)
@@ -401,8 +414,12 @@ export default class CanvasSettingsPanelExtension extends CanvasExtension {
         heightInput.style.border = '1px solid var(--background-modifier-border, #ccc)'
         
         const updateDimensions = () => {
-          const updateData = { [key]: [Number(widthInput.value), Number(heightInput.value)] }
-          settingsManager.setSetting(updateData)
+          if (setting.onChange) {
+            setting.onChange([Number(widthInput.value), Number(heightInput.value)]);
+          } else {
+            const updateData = { [key]: [Number(widthInput.value), Number(heightInput.value)] }
+            settingsManager.setSetting(updateData)
+          }
         }
         
         widthInput.addEventListener('change', updateDimensions)
@@ -420,22 +437,16 @@ export default class CanvasSettingsPanelExtension extends CanvasExtension {
         select.style.borderRadius = '4px'
         select.style.border = '1px solid var(--background-modifier-border, #ccc)'
         
-        // 这里需要根据不同的设置项添加不同的选项
-        if (key === 'defaultEdgeLineDirection') {
-          const options = {
-            'none': '无箭头',
-            'unidirectional': '单向箭头',
-            'bidirectional': '双向箭头',
-            'multi-arrow': '多箭头'
-          }
-          
-          Object.entries(options).forEach(([optionValue, optionLabel]) => {
-            const option = document.createElement('option')
-            option.value = optionValue
-            option.textContent = optionLabel
-            option.selected = value === optionValue
-            select.appendChild(option)
-          })
+        // 添加选项
+        if (setting.options) {
+          // 使用提供的选项
+          setting.options.forEach(option => {
+            const optionEl = document.createElement('option')
+            optionEl.value = option.value !== null ? option.value : ''
+            optionEl.textContent = option.label
+            optionEl.selected = value === option.value
+            select.appendChild(optionEl)
+          });
         } else if (key === 'nodeTypeOnDoubleClick') {
           const options = {
             'text': '文本节点',
@@ -450,12 +461,34 @@ export default class CanvasSettingsPanelExtension extends CanvasExtension {
             option.selected = value === optionValue
             select.appendChild(option)
           })
+        } else if (key === 'defaultEdgeLineDirection') {
+          const options = {
+            'none': '无箭头',
+            'unidirectional': '单向箭头',
+            'bidirectional': '双向箭头',
+            'multi-arrow': '多箭头'
+          }
+          
+          Object.entries(options).forEach(([optionValue, optionLabel]) => {
+            const option = document.createElement('option')
+            option.value = optionValue
+            option.textContent = optionLabel
+            option.selected = value === optionValue
+            select.appendChild(option)
+          })
         }
         
         select.addEventListener('change', () => {
+          // 处理空字符串为null（表示默认值）
+          const selectedValue = select.value === '' ? null : select.value;
+          
           // 更新设置
-          const updateData = { [key]: select.value }
-          settingsManager.setSetting(updateData)
+          if (setting.onChange) {
+            setting.onChange(selectedValue);
+          } else {
+            const updateData = { [key]: selectedValue }
+            settingsManager.setSetting(updateData)
+          }
         })
         
         container.appendChild(select)
@@ -483,7 +516,25 @@ export default class CanvasSettingsPanelExtension extends CanvasExtension {
         
       case 'node':
         settings.push(
-          { key: 'nodeStylingFeatureEnabled', type: 'boolean', value: settingsManager.getSetting('nodeStylingFeatureEnabled') }
+          { key: 'nodeStylingFeatureEnabled', type: 'boolean', value: settingsManager.getSetting('nodeStylingFeatureEnabled') },
+          { 
+            key: 'defaultNodeDisplay', 
+            type: 'dropdown', 
+            value: settingsManager.getSetting('defaultTextNodeStyleAttributes')?.display || null,
+            options: [
+              { value: null, label: '标准' },
+              { value: 'pure-text', label: '纯文本' }
+            ],
+            onChange: (value) => {
+              const currentStyles = settingsManager.getSetting('defaultTextNodeStyleAttributes') || {};
+              settingsManager.setSetting({
+                defaultTextNodeStyleAttributes: {
+                  ...currentStyles,
+                  display: value
+                }
+              });
+            }
+          }
         )
         break
         

@@ -70,6 +70,23 @@ export const BUILTIN_NODE_STYLE_ATTRIBUTES = [
     ]
   },
   {
+    key: 'display',
+    label: '显示方式',
+    nodeTypes: ['text'],
+    options: [
+      {
+        icon: 'box',
+        label: '标准',
+        value: null
+      },
+      {
+        icon: 'text',
+        label: '纯文本',
+        value: 'pure-text'
+      }
+    ]
+  },
+  {
     key: 'shape',
     label: 'Shape',
     nodeTypes: ['text'],

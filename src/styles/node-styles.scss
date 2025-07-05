@@ -307,4 +307,49 @@
     border-bottom: none;
   }
   //#endregion
+
+  //#region Display Styles
+  &[data-display='pure-text'] {
+    // 移除边框和背景
+    .canvas-node-container {
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      
+      // 移除内容区域的背景和边框
+      .canvas-node-content {
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+    }
+    
+    // 隐藏标签和页脚
+    .canvas-node-label-container,
+    .canvas-node-footer {
+      display: none !important;
+    }
+    
+    // 调整内边距，使文本更紧凑
+    .markdown-preview-view {
+      padding: 0 !important;
+      
+      // 移除markdown内容的背景
+      .markdown-preview-section {
+        background: transparent !important;
+      }
+    }
+    
+    // 选中状态下显示虚线边框，便于操作
+    &.is-focused, &.is-selected {
+      .canvas-node-container {
+        border: 2px dashed var(--color-accent) !important;
+      }
+    }
+    
+    // 悬停时显示淡色边框，提示可交互
+    &:not(.is-focused):not(.is-selected):hover .canvas-node-container {
+      border: 1px dashed var(--background-modifier-border) !important;
+    }
+  }
+  //#endregion
 }
