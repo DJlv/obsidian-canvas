@@ -106,8 +106,10 @@ export default class CanvasLayerExtension extends CanvasExtension {
     const panel = document.createElement('div')
     panel.id = LAYER_PANEL_ID
     panel.style.position = 'fixed'
-    panel.style.top = '80px'
-    panel.style.right = '40px'
+    // 居中显示
+    panel.style.top = '50%'
+    panel.style.left = '50%'
+    panel.style.transform = 'translate(-50%, -50%)'
     panel.style.zIndex = '9999'
     panel.style.background = 'var(--background-primary, #fff)'
     panel.style.border = '1px solid var(--background-modifier-border, #ccc)'
@@ -119,25 +121,37 @@ export default class CanvasLayerExtension extends CanvasExtension {
     panel.style.maxHeight = '60vh'
     panel.style.overflowY = 'auto'
 
-    // 标题栏
+    // 标题栏（作为拖动区域）
+    const titleBar = document.createElement('div')
+    titleBar.style.display = 'flex'
+    titleBar.style.justifyContent = 'space-between'
+    titleBar.style.alignItems = 'center'
+    titleBar.style.marginBottom = '12px'
+    titleBar.style.cursor = 'move' // 指示可拖动
+    titleBar.style.userSelect = 'none' // 防止文本选择
+    titleBar.style.paddingBottom = '8px'
+    titleBar.style.borderBottom = '1px solid var(--background-modifier-border, #ccc)'
+    panel.appendChild(titleBar)
+
+    // 标题文本
     const title = document.createElement('div')
     title.textContent = '图层管理'
     title.style.fontWeight = 'bold'
-    title.style.marginBottom = '12px'
-    panel.appendChild(title)
+    titleBar.appendChild(title)
 
     // 关闭按钮
     const closeBtn = document.createElement('button')
     closeBtn.textContent = '×'
-    closeBtn.style.position = 'absolute'
-    closeBtn.style.top = '8px'
-    closeBtn.style.right = '12px'
     closeBtn.style.background = 'none'
     closeBtn.style.border = 'none'
-    closeBtn.style.fontSize = '12px'
+    closeBtn.style.fontSize = '16px'
     closeBtn.style.cursor = 'pointer'
+    closeBtn.style.padding = '0 4px'
     closeBtn.onclick = () => panel.remove()
-    panel.appendChild(closeBtn)
+    titleBar.appendChild(closeBtn)
+
+    // 添加拖动功能
+    this.makeDraggable(panel, titleBar)
 
     // 图层列表
     const list = document.createElement('div')
@@ -164,6 +178,49 @@ export default class CanvasLayerExtension extends CanvasExtension {
     panel.appendChild(addBtn)
 
     return panel
+  }
+
+  // 添加拖动功能
+  private makeDraggable(panel: HTMLElement, handle: HTMLElement) {
+    let offsetX = 0
+    let offsetY = 0
+    let isDragging = false
+
+    const startDrag = (e: MouseEvent) => {
+      // 获取鼠标相对于面板的位置
+      const rect = panel.getBoundingClientRect()
+      offsetX = e.clientX - rect.left
+      offsetY = e.clientY - rect.top
+      isDragging = true
+
+      // 添加临时事件监听器
+      document.addEventListener('mousemove', drag)
+      document.addEventListener('mouseup', stopDrag)
+    }
+
+    const drag = (e: MouseEvent) => {
+      if (!isDragging) return
+      
+      // 计算新位置
+      const x = e.clientX - offsetX
+      const y = e.clientY - offsetY
+      
+      // 设置面板位置（取消居中变换）
+      panel.style.transform = 'none'
+      panel.style.left = `${x}px`
+      panel.style.top = `${y}px`
+    }
+
+    const stopDrag = () => {
+      isDragging = false
+      
+      // 移除临时事件监听器
+      document.removeEventListener('mousemove', drag)
+      document.removeEventListener('mouseup', stopDrag)
+    }
+
+    // 添加拖动开始事件监听器
+    handle.addEventListener('mousedown', startDrag)
   }
 
   private renderLayerList(canvas: Canvas, container: HTMLElement) {
