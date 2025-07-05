@@ -73,7 +73,31 @@ export default class EdgeStylesExtension extends CanvasExtension {
         this.updateAllEdgesInArea(canvas, selectedNodeBBox)
       }
     ))
+    
+    // 监听颜色变化事件 - 使用edge-changed事件，因为颜色变化会触发这个事件
+    this.plugin.registerEvent(this.plugin.app.workspace.on(
+      'advanced-canvas:edge-changed',
+      (canvas: Canvas, edge: CanvasEdge) => {
+        // 检查是否是颜色变化
+        this.addMultipleArrows(canvas, edge);
+      }
+    ))
+    
+    // 监听数据变化事件
+    this.plugin.registerEvent(this.plugin.app.workspace.on(
+      'advanced-canvas:data-loaded:after',
+      (canvas: Canvas) => {
+        // 更新所有边缘的箭头
+        canvas.edges.forEach(edge => {
+          this.addMultipleArrows(canvas, edge);
+        });
+      }
+    ))
   }
+
+
+  
+
 
   // Skip if isDragging and setting isn't enabled and not connecting an edge
   private shouldUpdateEdge(canvas: Canvas): boolean {
@@ -180,6 +204,11 @@ export default class EdgeStylesExtension extends CanvasExtension {
     const arrowPolygonPoints = this.getArrowPolygonPoints(edgeData.styleAttributes?.arrow)
     if (edge.fromLineEnd?.el) edge.fromLineEnd.el.querySelector('polygon')?.setAttribute('points', arrowPolygonPoints)
     if (edge.toLineEnd?.el) edge.toLineEnd.el.querySelector('polygon')?.setAttribute('points', arrowPolygonPoints)
+    
+    // 确保在下一帧更新箭头颜色（解决颜色变化后箭头不更新的问题）
+    setTimeout(() => {
+      this.addMultipleArrows(canvas, edge);
+    }, 50);
   }
 
   // 在连接线上添加多个方向箭头
@@ -246,26 +275,42 @@ export default class EdgeStylesExtension extends CanvasExtension {
         arrowPoints = '0,0 -12,-6 -12,6';
     }
     
-    // 获取线段颜色
-    let fillColor = 'var(--interactive-accent)';
-    let strokeColor = 'var(--background-primary)';
+    // 直接从边缘获取颜色
+    // 获取边缘的stroke颜色
+    let fillColor = '';
     
-    // 如果边缘有颜色属性，则使用该颜色
-    if (edgeData.color) {
-      // 检查颜色是否为预设颜色（数字1-6）或十六进制颜色
-      if (/^[1-6]$/.test(edgeData.color)) {
-        // 预设颜色，使用CSS变量
-        fillColor = `var(--canvas-color-${edgeData.color})`;
-      } else {
-        // 十六进制颜色
-        fillColor = edgeData.color;
+    // 尝试直接从SVG元素获取颜色
+    const strokeAttr = edge.path.display.getAttribute('stroke');
+    if (strokeAttr && strokeAttr !== 'none') {
+      fillColor = strokeAttr;
+      console.log('直接从SVG获取颜色:', fillColor);
+    } 
+    // 如果没有直接获取到，使用计算样式
+    else {
+      try {
+        const computedStyle = window.getComputedStyle(edge.path.display);
+        if (computedStyle.stroke && computedStyle.stroke !== 'none') {
+          fillColor = computedStyle.stroke;
+          console.log('从计算样式获取颜色:', fillColor);
+        }
+      } catch (e) {
+        console.error('获取计算样式失败:', e);
       }
-      
-      // 确定适合的描边颜色（深色背景用浅色描边，浅色背景用深色描边）
-      if (this.isLightColor(fillColor)) {
-        strokeColor = '#333333';
+    }
+    
+    // 如果仍然没有获取到颜色，使用边缘数据中的颜色
+    if (!fillColor || fillColor === 'none') {
+      if (edgeData.color) {
+        if (/^[1-6]$/.test(edgeData.color)) {
+          fillColor = `var(--canvas-color-${edgeData.color})`;
+        } else {
+          fillColor = edgeData.color;
+        }
+        console.log('从边缘数据获取颜色:', fillColor);
       } else {
-        strokeColor = '#ffffff';
+        // 默认颜色
+        fillColor = 'var(--interactive-accent)';
+        console.log('使用默认颜色');
       }
     }
     
@@ -292,15 +337,76 @@ export default class EdgeStylesExtension extends CanvasExtension {
       arrow.setAttribute("class", "edge-direction-arrow");
       arrow.setAttribute("points", arrowPoints);
       arrow.setAttribute("fill", fillColor);
-      arrow.setAttribute("stroke", strokeColor);
+      arrow.setAttribute("stroke", "var(--background-primary)");
       arrow.setAttribute("stroke-width", "1");
       arrow.setAttribute("transform", `translate(${point.x},${point.y}) rotate(${angle})`);
+      
+      // 添加样式属性，帮助调试
+      arrow.setAttribute("data-color-source", fillColor);
       
       // 添加到边缘的线组元素中
       edge.lineGroupEl.appendChild(arrow);
     }
   }
   
+  // 获取边缘的颜色（综合多种方法）
+  private getEdgeColor(edge: CanvasEdge): string {
+    // 直接从DOM元素获取颜色
+    try {
+      // 尝试从SVG路径元素获取stroke属性
+      const strokeAttr = edge.path?.display?.getAttribute('stroke');
+      if (strokeAttr && strokeAttr !== 'none') {
+        console.log('从SVG获取到的颜色:', strokeAttr);
+        return strokeAttr;
+      }
+    } catch (e) {
+      console.error('获取SVG stroke属性失败:', e);
+    }
+    
+    // 尝试从计算样式获取
+    try {
+      const computedStyle = window.getComputedStyle(edge.path.display);
+      const stroke = computedStyle.stroke;
+      if (stroke && stroke !== 'none' && stroke !== '') {
+        console.log('从计算样式获取到的颜色:', stroke);
+        return stroke;
+      }
+    } catch (e) {
+      console.error('获取计算样式失败:', e);
+    }
+    
+    // 从边缘数据获取颜色
+    const edgeData = edge.getData();
+    if (edgeData.color) {
+      if (/^[1-6]$/.test(edgeData.color)) {
+        // 获取预设颜色的实际值
+        const colorClass = `canvas-color-${edgeData.color}`;
+        const colorElement = document.createElement('div');
+        colorElement.className = colorClass;
+        document.body.appendChild(colorElement);
+        const computedColor = window.getComputedStyle(colorElement).color;
+        document.body.removeChild(colorElement);
+        
+        if (computedColor) {
+          console.log('从预设颜色获取到的颜色:', computedColor);
+          return computedColor;
+        }
+        
+        // 如果无法获取计算值，返回CSS变量
+        console.log('使用CSS变量:', `var(--canvas-color-${edgeData.color})`);
+        return `var(--canvas-color-${edgeData.color})`;
+      } else {
+        // 直接返回十六进制颜色
+        console.log('使用十六进制颜色:', edgeData.color);
+        return edgeData.color;
+      }
+    }
+    
+    // 如果没有设置颜色，使用默认的强调色
+    console.log('使用默认强调色');
+    return 'var(--interactive-accent)';
+  }
+
   // 判断颜色是否为浅色
   private isLightColor(color: string): boolean {
     // 如果是CSS变量，无法直接判断，默认为深色
@@ -342,6 +448,44 @@ export default class EdgeStylesExtension extends CanvasExtension {
     
     // 亮度大于 127.5 (一半的 255) 认为是浅色
     return brightness > 127.5;
+  }
+
+  // 从颜色字符串中获取RGB值
+  private getRGBFromColor(color: string): { r: number, g: number, b: number } | null {
+    // 处理rgb/rgba格式
+    if (color.startsWith('rgb')) {
+      const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+      if (match) {
+        return {
+          r: parseInt(match[1], 10),
+          g: parseInt(match[2], 10),
+          b: parseInt(match[3], 10)
+        };
+      }
+    }
+    
+    // 处理十六进制格式
+    if (color.startsWith('#')) {
+      const hex = color.substring(1);
+      // 处理缩写形式 (#RGB)
+      if (hex.length === 3) {
+        return {
+          r: parseInt(hex[0] + hex[0], 16),
+          g: parseInt(hex[1] + hex[1], 16),
+          b: parseInt(hex[2] + hex[2], 16)
+        };
+      } 
+      // 处理完整形式 (#RRGGBB)
+      else if (hex.length === 6) {
+        return {
+          r: parseInt(hex.substring(0, 2), 16),
+          g: parseInt(hex.substring(2, 4), 16),
+          b: parseInt(hex.substring(4, 6), 16)
+        };
+      }
+    }
+    
+    return null;
   }
 
   private onEdgeCenterRequested(_canvas: Canvas, edge: CanvasEdge, center: Position) {

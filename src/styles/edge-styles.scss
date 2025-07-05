@@ -83,7 +83,36 @@
 .edge-direction-arrow {
   pointer-events: none;
   user-select: none;
-  opacity: 0.9;
+  opacity: 1; // 完全不透明
   stroke-linejoin: round;
+  stroke-width: 1px !important; // 确保边框宽度固定
   filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, 0.3));
+  
+  // 确保颜色正确应用
+  &[fill^="var"] {
+    &[fill="var(--interactive-accent)"] { fill: var(--interactive-accent); }
+    
+    // 预设颜色
+    &[fill="var(--canvas-color-1)"] { fill: var(--canvas-color-1); }
+    &[fill="var(--canvas-color-2)"] { fill: var(--canvas-color-2); }
+    &[fill="var(--canvas-color-3)"] { fill: var(--canvas-color-3); }
+    &[fill="var(--canvas-color-4)"] { fill: var(--canvas-color-4); }
+    &[fill="var(--canvas-color-5)"] { fill: var(--canvas-color-5); }
+    &[fill="var(--canvas-color-6)"] { fill: var(--canvas-color-6); }
+  }
+  
+  // 强制应用颜色
+  &[data-color-source^="var(--canvas-color-1)"] { fill: var(--canvas-color-1) !important; }
+  &[data-color-source^="var(--canvas-color-2)"] { fill: var(--canvas-color-2) !important; }
+  &[data-color-source^="var(--canvas-color-3)"] { fill: var(--canvas-color-3) !important; }
+  &[data-color-source^="var(--canvas-color-4)"] { fill: var(--canvas-color-4) !important; }
+  &[data-color-source^="var(--canvas-color-5)"] { fill: var(--canvas-color-5) !important; }
+  &[data-color-source^="var(--canvas-color-6)"] { fill: var(--canvas-color-6) !important; }
+  &[data-color-source^="var(--interactive-accent)"] { fill: var(--interactive-accent) !important; }
+  
+  // 确保十六进制颜色正确应用
+  &[data-color-source^="#"] { 
+    // 无法直接使用attr()函数，但可以通过内联样式解决
+    // 在JS中已经设置了fill属性
+  }
 }
