@@ -130,6 +130,26 @@ export const BUILTIN_NODE_STYLE_ATTRIBUTES = [
         icon: 'shape-database',
         label: 'Database',
         value: 'database'
+      },
+      {
+        icon: 'triangle',
+        label: '三角形',
+        value: 'triangle'
+      },
+      {
+        icon: 'pentagon',
+        label: '五边形',
+        value: 'pentagon'
+      },
+      {
+        icon: 'hexagon',
+        label: '六边形',
+        value: 'hexagon'
+      },
+      {
+        icon: 'octagon',
+        label: '八边形',
+        value: 'octagon'
       }
     ]
   },

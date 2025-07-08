@@ -18,6 +18,12 @@ const CUSTOM_ICONS = {
     </g>
   `,
   
+  // 多边形图标
+  'triangle': `<polygon points="50,10 10,90 90,90" stroke="currentColor" stroke-width="8.333" fill="transparent"/>`,
+  'pentagon': `<polygon points="50,10 90,40 80,90 20,90 10,40" stroke="currentColor" stroke-width="8.333" fill="transparent"/>`,
+  'hexagon': `<polygon points="30,10 70,10 90,50 70,90 30,90 10,50" stroke="currentColor" stroke-width="8.333" fill="transparent"/>`,
+  'octagon': `<polygon points="35,10 65,10 90,35 90,65 65,90 35,90 10,65 10,35" stroke="currentColor" stroke-width="8.333" fill="transparent"/>`,
+  
   'border-solid': `<path stroke="currentColor" fill="none" stroke-width="8.333" d="M91.6667 45.8333v4.1667c0 2.0833-2.0833 4.1667-4.1667 4.1667H12.5c-2.0833 0-4.1667-2.0833-4.1667-4.1667v-4.1667"/>`,
   'border-dashed': `<path stroke="currentColor" fill="none" stroke-width="8.333" stroke-dasharray="13.7" d="M91.6667 45.8333v4.1667c0 2.0833-2.0833 4.1667-4.1667 4.1667H12.5c-2.0833 0-4.1667-2.0833-4.1667-4.1667v-4.1667"/>`,
   'border-dotted': `<path stroke="currentColor" fill="none" stroke-width="8.333" stroke-dasharray="8.7" d="M91.6667 45.8333v4.1667c0 2.0833-2.0833 4.1667-4.1667 4.1667H12.5c-2.0833 0-4.1667-2.0833-4.1667-4.1667v-4.1667"/>`,

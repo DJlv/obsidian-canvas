@@ -49,6 +49,7 @@ import CustomEdgeConnectionPositionsExtension from './canvas-extensions/custom-e
 import CustomEdgeConnectionRendererExtension from './canvas-extensions/custom-edge-connection-renderer'
 import CanvasSettingsPanelExtension from './canvas-extensions/canvas-settings-panel-extension'
 import PureTextNodeExtension from './canvas-extensions/pure-text-node-extension'
+import PolygonNodeExtension from './canvas-extensions/polygon-node-extension'
 // import TableCanvasExtension from './canvas-extensions/table-canvas-extension'
 // import PureTableCanvasExtension from './canvas-extensions/pure-table-canvas-extension'
 
@@ -113,6 +114,7 @@ const CANVAS_EXTENSIONS: typeof CanvasExtension[] = [
   CanvasLayerExtension,
   CanvasSettingsPanelExtension,
   PureTextNodeExtension,
+  PolygonNodeExtension,
   // TableCanvasExtension,
   // PureTableCanvasExtension,
 ]

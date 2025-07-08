@@ -252,6 +252,84 @@
   }
   //#endregion
 
+  //#region Polygon Shapes
+  @mixin polygon-shape($clip-path) {
+    @extend .reactive-node;
+    
+    &.is-focused, &.is-selected {
+      border-radius: var(--radius-m);
+      outline: 2px solid var(--color-accent);
+      outline-offset: 5px;
+    }
+
+    .canvas-node-container {
+      border: none;
+      box-shadow: none !important;
+      clip-path: $clip-path;
+      
+      /* Clip placeholder */
+      .canvas-node-placeholder::after {
+        clip-path: $clip-path;
+      }
+      
+      /* Center content */
+      .canvas-node-content {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        
+        .markdown-preview-view {
+          padding: 0 !important;
+          overflow-y: initial;
+          
+          .markdown-preview-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 0 !important;
+          }
+        }
+      }
+    }
+    
+    /* Border */
+    &::before {
+      content: '';
+      position: absolute;
+      top: calc(var(--border-width) * -1);
+      left: calc(var(--border-width) * -1);
+      width: calc(100% + var(--border-width) * 2);
+      height: calc(100% + var(--border-width) * 2);
+      
+      clip-path: $clip-path;
+      background-color: var(--border-color);
+      z-index: -1;
+    }
+  }
+  
+  &[data-shape='triangle'] {
+    @include polygon-shape(polygon(50% 0%, 0% 100%, 100% 100%));
+    
+    /* Add extra padding at the bottom for better text display */
+    .canvas-node-content {
+      padding-bottom: 15px;
+      padding-top: 5px;
+    }
+  }
+  
+  &[data-shape='pentagon'] {
+    @include polygon-shape(polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%));
+  }
+  
+  &[data-shape='hexagon'] {
+    @include polygon-shape(polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%));
+  }
+  
+  &[data-shape='octagon'] {
+    @include polygon-shape(polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%));
+  }
+  //#endregion
+
   //#region Borders
   &[data-border='dashed'] .canvas-node-container {
     box-shadow: none;
